@@ -21,33 +21,32 @@ library(randomForest)
 
 ## Pregunta 1
 
+### Preparación de datos
+
 ```{r}
-set.seed(1234)
+set.seed(12345)
 
 NDatos <- data.frame(read_excel("NDatos2000_2010.xlsx")) # 
 orig_col <- colnames(NDatos)
 colnames(NDatos) <- 1:ncol(NDatos)
+NDatos <- NDatos[-c(23,24,25)]
+NDatos[,12] <- as.numeric(NDatos[,12])
 
 train_index <- sample(1:nrow(NDatos), nrow(NDatos) * 0.7) # cambiar aqui el split train/test
+test_index <- setdiff(1:nrow(NDatos), train_index)
+
 train_datos <- NDatos[train_index,]
-test_datos <- NDatos[-train_index,]
+# test_datos <- NDatos[-train_index,]
+test_datos <- NDatos[test_index,]
 
-modelo1 = randomForest(train_datos[,-19],train_datos[,19],ntree=500,maxnodes=100, importance=TRUE, mtry=2)
-
-predict1 = predict(modelo1,newdata=test_datos,type="response")
-
-error_prediccion_1=test_datos[,19]-predict1
-# View(data.frame(observed=test_datos[,19],predicted=predict1,error_prediccion_1))
-MSE_RF=sum(error_prediccion_1^2)/nrow(test_datos)
-print(MSE_RF)
 ```
-## Evaluación de Random Forests
+### Evaluación de diferentes Random Forests
 
 ```{r}
 
-ntrees = c(50,100,500,1000)
-maxnodes = c(10, 50, 100, 200)
-mtries = c(2,3)
+ntrees = c(1000)
+maxnodes = c(100, 150)
+mtries = c(3)
 
 for (ntree in ntrees) {
   for (maxnode in maxnodes) {
@@ -64,6 +63,54 @@ for (ntree in ntrees) {
     }
   }
 }
+
+
+```
+
+Vemos en Results.txt que el modelo con la MSE la más baja es el 500, 200, 3 
+que vamos a usar ahora.
+
+
+### Seleción del mejor RF (500, 200, 3)
+
+```{r}
+modelo1 = randomForest(train_datos[,-19],train_datos[,19],ntree=500,maxnodes=200, mtry=3, importance=TRUE)
+
+predict1 = predict(modelo1,newdata=test_datos,type="response")
+
+error_prediccion_1=test_datos[,19]-predict1
+# View(data.frame(observed=test_datos[,19],predicted=predict1,error_prediccion_1))
+MSE_RF=sum(error_prediccion_1^2)/nrow(test_datos)
+print(MSE_RF)
+
+```
+
+```{r}
+par(mfrow = c(2,1))
+# Tracer les courbes d'apprentissage et de test
+plot(NDatos$'19', type = "l", col = "blue", xlab = "Index", ylab = "Valeur", 
+     # xlim = c(17500,18200),
+     main = "Courbes d'apprentissage et de test")
+# lines(seq_along(train_datos$'19'), train_datos$'19', col = "blue")
+points(test_index, test_datos$'19', 
+       type = "p", pch = 3, cex = 0.1,
+       col = "orange")
+
+# Tracer les courbes d'apprentissage et de test
+plot(NDatos$'19', type = "l", col = "blue", xlab = "Index", ylab = "Valeur", 
+     xlim = c(17500,18200),
+     main = "Zoom")
+# lines(seq_along(train_datos$'19'), train_datos$'19', col = "blue")
+points(test_index, test_datos$'19', 
+       type = "p", pch = 3, cex = 1,
+       col = "orange")
+
+```
+
+
+```{r}
+library(partykit)
+modelo_ctree = ctree(train_datos[,19] ~ .,data=train_datos,control=ctree_control(maxdepth=8))
 
 
 ```
