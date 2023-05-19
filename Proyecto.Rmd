@@ -16,6 +16,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(readxl)
 library(randomForest)
+library(partykit)
+library(rpart)
 
 ```
 
@@ -36,8 +38,8 @@ train_index <- sample(1:nrow(NDatos), nrow(NDatos) * 0.7) # cambiar aqui el spli
 test_index <- setdiff(1:nrow(NDatos), train_index)
 
 train_datos <- NDatos[train_index,]
-# test_datos <- NDatos[-train_index,]
-test_datos <- NDatos[test_index,]
+test_datos <- NDatos[-train_index,]
+# test_datos <- NDatos[test_index,]
 
 ```
 ### Evaluación de diferentes Random Forests
@@ -71,12 +73,12 @@ Vemos en Results.txt que el modelo con la MSE la más baja es el 500, 200, 3
 que vamos a usar ahora.
 
 
-### Seleción del mejor RF (500, 200, 3)
+### Elección del mejor RF (500, 200, 3)
 
 ```{r}
-modelo1 = randomForest(train_datos[,-19],train_datos[,19],ntree=500,maxnodes=200, mtry=3, importance=TRUE)
+modelo1 = randomForest(train_datos[,c(-19,-12)],train_datos[,19],ntree=500,maxnodes=200, mtry=3, importance=TRUE)
 
-predict1 = predict(modelo1,newdata=test_datos,type="response")
+predict1 = predict(modelo1,newdata=test_datos[,-12],type="response")
 
 error_prediccion_1=test_datos[,19]-predict1
 # View(data.frame(observed=test_datos[,19],predicted=predict1,error_prediccion_1))
@@ -109,9 +111,28 @@ points(test_index, test_datos$'19',
 
 
 ```{r}
-library(partykit)
 modelo_ctree = ctree(train_datos[,19] ~ .,data=train_datos,control=ctree_control(maxdepth=8))
+varimp(modelo_ctree)
 
+predict_ctree = predict(modelo_ctree, newdata = test_datos, type="response")
+error_prediccion_ctree = test_datos[,19] - predict_ctree
+# View(data.frame(observed=test_datos[,19],predicted=predict_ctree,error=error_prediccion_ctree))
+
+MSE_CT = sum(error_prediccion_ctree^2)/nrow(test_datos)
+print(MSE_CT)
 
 ```
+## Modelo RPart
+
+```{r}
+modelo_rpart = rpart(train_datos[,19] ~ .,data=train_datos, control=rpart.control(cp=0.04))
+
+predict_rpart = predict(modelo_rpart, newdata = test_datos, type = "vector")
+error_prediccion_rpart = test_datos[,19] - predict_rpart
+
+MSE_RP = sum(error_prediccion_rpart^2)/nrow(test_datos)
+print(MSE_RP)
+
+```
+
 
