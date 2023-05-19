@@ -3,8 +3,8 @@ title: "Trabajo"
 author: "Arthur"
 date: "2023-05-17"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Imports
 
-```{r}
+```{r imports}
 library(readxl)
 library(randomForest)
 library(partykit)
@@ -27,7 +27,7 @@ library(rpart)
 
 ### Preparación de datos
 
-```{r}
+```{r Preparacion}
 set.seed(12345)
 
 NDatos <- data.frame(read_excel("NDatos2000_2010.xlsx"))
@@ -48,7 +48,7 @@ test_datos <- NDatos[-train_index,]
 
 ### Modelo RPart
 
-```{r}
+```{r rpart}
 modelo_rpart = rpart(train_datos[,19] ~ .,data=train_datos, control=rpart.control(cp=0.04))
 
 predict_rpart = predict(modelo_rpart, newdata = test_datos, type = "vector")
@@ -61,7 +61,7 @@ print(MSE_RP)
 
 ### Evaluación de differentes Random Forests
 
-```{r}
+```{r randomforest}
 
 ntrees = c(150, 200, 500)
 maxnodes = c(150, 200, 250)
@@ -92,7 +92,7 @@ que vamos a usar ahora.
 
 ### Elección del mejor RF (500, 250, 4)
 
-```{r}
+```{r rf elijido}
 modelo1 = randomForest(train_datos[,c(-19,-12)],train_datos[,19],ntree=500,maxnodes=250, mtry=4, importance=TRUE)
 
 predict1 = predict(modelo1,newdata=test_datos[,-12],type="response")
@@ -104,7 +104,7 @@ print(MSE_RF)
 
 ```
 
-```{r}
+```{r plot rf}
 par(mfrow = c(2,1))
 
 plot(NDatos$'19', type = "l", col = "blue", xlab = "Index", ylab = "Valeur", 
@@ -127,7 +127,7 @@ points(test_index, predict1,
 ```
 
 
-```{r}
+```{r ctree}
 
 modelo_ctree = ctree(`19` ~ .,data=train_datos,control=ctree_control(maxdepth=9))
 # varimp(modelo_ctree)
@@ -146,7 +146,7 @@ El modelo es más preciso que el RandomForest con menos recursos necesarios.
 
 ## 2. Importancia de variables
 
-```{r}
+```{r importance crtee}
 
 data.frame(varimp(modelo_ctree))
 
@@ -156,14 +156,14 @@ ya que precede directamente a la variable que se quiere predecir.
 
 Veamos la importancia de las variables de RandomForest:
 
-```{r}
+```{r importance rf}
 importance_rf <- data.frame(importance(modelo1))
 importance_rf[order(-importance_rf$`X.IncMSE`),]
 ```
 Aquí, en cambio, el modelo explica sus resultados con la hora del día, 
 y luego con variables más sorprendentes: 17 - Hydro Production t-1 por ejemplo.
 
-```{r}
+```{r varianza ndatos}
 
 print(var(NDatos[,5]))
 print(var(NDatos[,17]))
@@ -178,7 +178,7 @@ explican de forma más natural el rendimiento del modelo.
 ## 3. Predicciones a partir de un día
 
 Elijimos el modelo ctree:
-```{r}
+```{r ctree elijido}
 
 # Filtrado de datos
 NDatos2 <- NDatos[NDatos$`1` == 11 & NDatos$`2` == 12 & NDatos$`3` == 2010,]
@@ -205,7 +205,7 @@ print(paste('MAPE:',MAPE_CT2))
 
 ## 4. Plot resultados
 
-```{r}
+```{r plot ctree}
 
 plot(NDatos$'19', type = "l", col = "blue", xlab = "Index", ylab = "Valeur", 
      # xlim = c(17500,18200),
@@ -217,11 +217,11 @@ points(seq_along(predict_ctree2), predict_ctree2,
 
 ```
 
-```{r}
+```{r plot zoom ctree}
 
 plot(NDatos$'19', type = "l", col = "blue", xlab = "Index", ylab = "Valeur", 
      xlim = c(95843,95952),
-     main = "Zoom en la curva en de 7 a 11 de diciembre 2010")
+     main = "Zoom en la curva de 7 a 11 de diciembre 2010")
 
 points(seq_along(predict_ctree2), predict_ctree2,
        type = "p", pch = 3, cex = 1,
