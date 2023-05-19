@@ -2,7 +2,9 @@
 title: "Trabajo"
 author: "Arthur"
 date: "2023-05-17"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -21,14 +23,14 @@ library(rpart)
 
 ```
 
-## Pregunta 1
+## 1. Modelos de arboles
 
 ### Preparación de datos
 
 ```{r}
 set.seed(12345)
 
-NDatos <- data.frame(read_excel("NDatos2000_2010.xlsx")) # 
+NDatos <- data.frame(read_excel("NDatos2000_2010.xlsx"))
 orig_col <- colnames(NDatos)
 colnames(NDatos) <- 1:ncol(NDatos)
 NDatos <- NDatos[-c(23,24,25)]
@@ -42,87 +44,9 @@ test_datos <- NDatos[-train_index,]
 # test_datos <- NDatos[test_index,]
 
 ```
-### Evaluación de diferentes Random Forests
-
-```{r}
-
-ntrees = c(1000)
-maxnodes = c(100, 150)
-mtries = c(3)
-
-for (ntree in ntrees) {
-  for (maxnode in maxnodes) {
-    for (mtry in mtries) {
-      print(paste("Modeling for", as.character(ntree), ",", as.character(maxnode), ",", as.character(mtry)))
-      rf_model <- randomForest(train_datos[,-19], train_datos[,19], 
-                               ntree = ntree, maxnodes = maxnode, mtry = mtry, importance=TRUE)
-      
-      predict_rf = predict(rf_model,newdata=test_datos,type="response")
-      
-      error_prediccion_rf = test_datos[,19] - predict_rf
-      MSE_RF=sum(error_prediccion_rf^2)/nrow(test_datos)
-      print(MSE_RF)
-    }
-  }
-}
 
 
-```
-
-Vemos en Results.txt que el modelo con la MSE la más baja es el 500, 200, 3 
-que vamos a usar ahora.
-
-
-### Elección del mejor RF (500, 200, 3)
-
-```{r}
-modelo1 = randomForest(train_datos[,c(-19,-12)],train_datos[,19],ntree=500,maxnodes=200, mtry=3, importance=TRUE)
-
-predict1 = predict(modelo1,newdata=test_datos[,-12],type="response")
-
-error_prediccion_1=test_datos[,19]-predict1
-# View(data.frame(observed=test_datos[,19],predicted=predict1,error_prediccion_1))
-MSE_RF=sum(error_prediccion_1^2)/nrow(test_datos)
-print(MSE_RF)
-
-```
-
-```{r}
-par(mfrow = c(2,1))
-# Tracer les courbes d'apprentissage et de test
-plot(NDatos$'19', type = "l", col = "blue", xlab = "Index", ylab = "Valeur", 
-     # xlim = c(17500,18200),
-     main = "Courbes d'apprentissage et de test")
-# lines(seq_along(train_datos$'19'), train_datos$'19', col = "blue")
-points(test_index, test_datos$'19', 
-       type = "p", pch = 3, cex = 0.1,
-       col = "orange")
-
-# Tracer les courbes d'apprentissage et de test
-plot(NDatos$'19', type = "l", col = "blue", xlab = "Index", ylab = "Valeur", 
-     xlim = c(17500,18200),
-     main = "Zoom")
-# lines(seq_along(train_datos$'19'), train_datos$'19', col = "blue")
-points(test_index, test_datos$'19', 
-       type = "p", pch = 3, cex = 1,
-       col = "orange")
-
-```
-
-
-```{r}
-modelo_ctree = ctree(train_datos[,19] ~ .,data=train_datos,control=ctree_control(maxdepth=8))
-varimp(modelo_ctree)
-
-predict_ctree = predict(modelo_ctree, newdata = test_datos, type="response")
-error_prediccion_ctree = test_datos[,19] - predict_ctree
-# View(data.frame(observed=test_datos[,19],predicted=predict_ctree,error=error_prediccion_ctree))
-
-MSE_CT = sum(error_prediccion_ctree^2)/nrow(test_datos)
-print(MSE_CT)
-
-```
-## Modelo RPart
+### Modelo RPart
 
 ```{r}
 modelo_rpart = rpart(train_datos[,19] ~ .,data=train_datos, control=rpart.control(cp=0.04))
@@ -135,4 +59,173 @@ print(MSE_RP)
 
 ```
 
+### Evaluación de differentes Random Forests
+
+```{r}
+
+ntrees = c(150, 200, 500)
+maxnodes = c(150, 200, 250)
+mtries = c(3,4)
+
+for (ntree in ntrees) {
+  for (maxnode in maxnodes) {
+    for (mtry in mtries) {
+      print(paste("Modeling for", as.character(ntree), ",", as.character(maxnode), ",", as.character(mtry)))
+      rf_model <- randomForest(train_datos[,c(-19,-12)], train_datos[,19], 
+                               ntree = ntree, maxnodes = maxnode, mtry = mtry, importance=FALSE)
+      
+      predict_rf = predict(rf_model,newdata=test_datos[,-12],type="response")
+      
+      error_prediccion_rf = test_datos[,19] - predict_rf
+      MSE_RF=sum(error_prediccion_rf^2)/nrow(test_datos)
+      print(MSE_RF)
+    }
+  }
+}
+
+
+```
+
+Vemos en Results.txt que el modelo con la MSE la más baja es el 500, 250, 4 
+que vamos a usar ahora.
+
+
+### Elección del mejor RF (500, 250, 4)
+
+```{r}
+modelo1 = randomForest(train_datos[,c(-19,-12)],train_datos[,19],ntree=500,maxnodes=250, mtry=4, importance=TRUE)
+
+predict1 = predict(modelo1,newdata=test_datos[,-12],type="response")
+
+error_prediccion_1=test_datos[,19]-predict1
+# View(data.frame(observed=test_datos[,19],predicted=predict1,error_prediccion_1))
+MSE_RF=sum(error_prediccion_1^2)/nrow(test_datos)
+print(MSE_RF)
+
+```
+
+```{r}
+par(mfrow = c(2,1))
+
+plot(NDatos$'19', type = "l", col = "blue", xlab = "Index", ylab = "Valeur", 
+     # xlim = c(17500,18200),
+     main = "Curvas de aprendizaje y pruebas")
+
+points(test_index, predict1, 
+       type = "p", pch = 3, cex = 0.1,
+       col = "orange")
+
+
+plot(NDatos$'19', type = "l", col = "blue", xlab = "Index", ylab = "Valeur", 
+     xlim = c(17500,18200),
+     main = "Zoom en la curva")
+
+points(test_index, predict1, 
+       type = "p", pch = 3, cex = 1,
+       col = "orange")
+
+```
+
+
+```{r}
+
+modelo_ctree = ctree(`19` ~ .,data=train_datos,control=ctree_control(maxdepth=9))
+# varimp(modelo_ctree)
+
+predict_ctree = predict(modelo_ctree, newdata = test_datos, type="response")
+error_prediccion_ctree = test_datos[,19] - predict_ctree
+# View(data.frame(observed=test_datos[,19],predicted=predict_ctree,error=error_prediccion_ctree))
+
+MSE_CT = sum(error_prediccion_ctree^2)/nrow(test_datos)
+print(MSE_CT)
+
+```
+
+El modelo es más preciso que el RandomForest con menos recursos necesarios.
+**Por lo tanto, optamos por este.**
+
+## 2. Importancia de variables
+
+```{r}
+
+data.frame(varimp(modelo_ctree))
+
+```
+Es lógico ver una alta correlación con el tiempo t, 
+ya que precede directamente a la variable que se quiere predecir.
+
+Veamos la importancia de las variables de RandomForest:
+
+```{r}
+importance_rf <- data.frame(importance(modelo1))
+importance_rf[order(-importance_rf$`X.IncMSE`),]
+```
+Aquí, en cambio, el modelo explica sus resultados con la hora del día, 
+y luego con variables más sorprendentes: 17 - Hydro Production t-1 por ejemplo.
+
+```{r}
+
+print(var(NDatos[,5]))
+print(var(NDatos[,17]))
+print(var(NDatos[,18]))
+print(var(NDatos[,8]))
+
+```
+Todas las variables sorprendentes tienen una *gran varianza* frente a las que 
+explican de forma más natural el rendimiento del modelo.
+
+
+## 3. Predicciones a partir de un día
+
+Elijimos el modelo ctree:
+```{r}
+
+# Filtrado de datos
+NDatos2 <- NDatos[NDatos$`1` == 11 & NDatos$`2` == 12 & NDatos$`3` == 2010,]
+test_datos2 <- NDatos[NDatos$`1` != 11 | NDatos$`2` != 12 | NDatos$`3` != 2010,]
+
+# Train
+modelo_ctree2 = ctree(`19` ~ .,data=NDatos2,control=ctree_control(maxdepth=9))
+
+# MSE
+predict_ctree2 = predict(modelo_ctree2, newdata = test_datos2, type="response")
+error_prediccion_ctree = test_datos2[,19] - predict_ctree2
+
+MSE_CT2 = sum(error_prediccion_ctree^2)/nrow(test_datos2)
+print(paste('MSE:',MSE_CT))
+
+# MAPE
+indices <- seq_along(test_datos2[, 1])
+MAPE_CT2 <- mean(abs(
+  (predict_ctree2[test_datos2[,19]!=0] - test_datos2[test_datos2[,19]!=0,19])
+  / test_datos2[test_datos2[,19]!=0,19]) * 100, 
+                 na.rm = TRUE, finite.only = TRUE)
+print(paste('MAPE:',MAPE_CT2))
+```
+
+## 4. Plot resultados
+
+```{r}
+
+plot(NDatos$'19', type = "l", col = "blue", xlab = "Index", ylab = "Valeur", 
+     # xlim = c(17500,18200),
+     main = "Curvas de aprendizaje y pruebas")
+
+points(seq_along(predict_ctree2), predict_ctree2, 
+       type = "p", pch = 3, cex = 0.1,
+       col = "orange")
+
+```
+
+```{r}
+
+plot(NDatos$'19', type = "l", col = "blue", xlab = "Index", ylab = "Valeur", 
+     xlim = c(95843,95952),
+     main = "Zoom en la curva en de 7 a 11 de diciembre 2010")
+
+points(seq_along(predict_ctree2), predict_ctree2,
+       type = "p", pch = 3, cex = 1,
+       col = "orange")
+
+```
 
